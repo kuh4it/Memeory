@@ -10,6 +10,8 @@
 
 extern ULONG **KeServiceDescriptorTable;
 #define ALLOC_TAG               'wENU'
+
+BOOL DirectJmp;
 //
 // Installs a call layer at the supplied address and redirects it to the hook
 // address
@@ -85,10 +87,18 @@ NTSTATUS InstallCallLayer(
 		//
 		// Initialize the relative jump to after the function's preamble.
 		//
-		JmpSlotBuffer[PreambleSize]     = 0xff;
-		JmpSlotBuffer[PreambleSize + 1] = 0x25;
-		*(PULONG_PTR)(JmpSlotBuffer + PreambleSize + 2) = (ULONG_PTR)&Result->RealFunctionPostPreamble;
-
+		if(!DirectJmp)
+		{
+		    JmpSlotBuffer[PreambleSize]     = 0xff;
+		    JmpSlotBuffer[PreambleSize + 1] = 0x25;
+		    *(PULONG_PTR)(JmpSlotBuffer + PreambleSize + 2) = (ULONG_PTR)&Result->RealFunctionPostPreamble;
+		}
+		else
+		{
+		    JmpSlotBuffer[PreambleSize]     = 0xe9;
+		    *(PULONG_PTR)(JmpSlotBuffer + PreambleSize + 1) = (ULONG_PTR)&Result->RealFunctionPostPreamble;
+		}
+		
 		//
 		// Preserve the first n bytes of the function's preamble since we're about
 		// to overwrite them.
